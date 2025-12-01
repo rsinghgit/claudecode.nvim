@@ -747,6 +747,20 @@ function M._resolve_diff_as_saved(tab_name, buffer_id)
     logger.debug("diff", "No resolution callback found for saved diff", tab_name)
   end
 
+  -- Check if auto_close_on_accept is enabled
+  if config and config.diff_opts and config.diff_opts.auto_close_on_accept then
+    logger.debug("diff", "auto_close_on_accept enabled, scheduling cleanup for", tab_name)
+
+    -- Schedule cleanup after MCP response completes
+    vim.defer_fn(function()
+      -- Verify diff still exists and is in saved state
+      if active_diffs[tab_name] and active_diffs[tab_name].status == "saved" then
+        logger.debug("diff", "Auto-closing diff", tab_name)
+        M.close_diff_by_tab_name(tab_name)
+      end
+    end, 150) -- 150ms delay ensures deferred response system completes
+  end
+
   -- NOTE: Diff state cleanup is handled exclusively by the close_tab tool call
   logger.debug("diff", "Diff saved; awaiting close_tab for cleanup")
 end
