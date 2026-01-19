@@ -26,6 +26,7 @@ M.defaults = {
     keep_terminal_focus = false, -- If true, moves focus back to terminal after diff opens
     hide_terminal_in_new_tab = false, -- If true and opening in a new tab, do not show Claude terminal there
     on_new_file_reject = "keep_empty", -- "keep_empty" leaves an empty buffer; "close_window" closes the placeholder split
+    auto_close_on_accept = false, -- If true, automatically close diff windows after accepting changes
   },
   models = {
     { name = "Claude Opus 4.1 (Latest)", value = "opus" },
