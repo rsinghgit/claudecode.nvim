@@ -456,6 +456,124 @@ describe("Selection module", function()
 
     assert(selection.has_selection_changed(new_selection_diff_pos) == true)
   end)
+
+  it("should register BufEnter autocmd", function()
+    selection.enable(mock_server)
+
+    local autocmds = _G.vim._autocmds["ClaudeCodeSelection"]
+    assert(autocmds, "ClaudeCodeSelection autocommand group should exist")
+
+    -- Find autocmd with BufEnter
+    local found_bufenter = false
+    for _, autocmd in ipairs(autocmds.events) do
+      for _, event in ipairs(autocmd.events) do
+        if event == "BufEnter" then
+          found_bufenter = true
+          break
+        end
+      end
+      if found_bufenter then
+        break
+      end
+    end
+
+    assert(found_bufenter, "BufEnter event should be registered in autocommands")
+  end)
+
+  it("should ignore terminal buffers with claude in name", function()
+    selection.enable(mock_server)
+
+    -- Set up a terminal buffer with "claude" in the name
+    _G.vim._buffers[1] = {
+      name = "term://bash//claude",
+      lines = { "test" },
+    }
+
+    mock_server.last_broadcast = nil
+    selection.update_selection()
+
+    -- Should not broadcast because it's a terminal buffer with "claude" in name
+    assert(mock_server.last_broadcast == nil, "Should not update selection for terminal buffer with 'claude'")
+  end)
+
+  it("should ignore terminal buffers with Claude in uppercase", function()
+    selection.enable(mock_server)
+
+    -- Set up a terminal buffer with "Claude" in the name (uppercase)
+    _G.vim._buffers[1] = {
+      name = "term://zsh//path/with/Claude/in/it",
+      lines = { "test" },
+    }
+
+    mock_server.last_broadcast = nil
+    selection.update_selection()
+
+    -- Should not broadcast because it's a terminal buffer with "Claude" (case-insensitive)
+    assert(
+      mock_server.last_broadcast == nil,
+      "Should not update selection for terminal buffer with 'Claude' (uppercase)"
+    )
+  end)
+
+  it("should allow updates for terminal buffers without claude in name", function()
+    selection.enable(mock_server)
+
+    -- Set up a terminal buffer WITHOUT "claude" in the name
+    _G.vim._buffers[1] = {
+      name = "term://bash//some/other/terminal",
+      lines = { "test line" },
+    }
+    _G.vim._windows[1] = {
+      cursor = { 1, 0 },
+    }
+
+    mock_server.last_broadcast = nil
+    _G.vim.test.set_mode("n")
+    selection.update_selection()
+
+    -- Should broadcast because it doesn't have "claude" in the name
+    assert(mock_server.last_broadcast ~= nil, "Should update selection for terminal without 'claude'")
+  end)
+
+  it("should allow updates for non-terminal buffers", function()
+    selection.enable(mock_server)
+
+    -- Set up a regular file buffer
+    _G.vim._buffers[1] = {
+      name = "/path/to/file.lua",
+      lines = { "local x = 1" },
+    }
+    _G.vim._windows[1] = {
+      cursor = { 1, 0 },
+    }
+
+    mock_server.last_broadcast = nil
+    _G.vim.test.set_mode("n")
+    selection.update_selection()
+
+    -- Should broadcast because it's a regular file
+    assert(mock_server.last_broadcast ~= nil, "Should update selection for regular files")
+  end)
+
+  it("should not match old buffer name pattern", function()
+    selection.enable(mock_server)
+
+    -- Set up a buffer with the old exact match pattern
+    _G.vim._buffers[1] = {
+      name = "✻ [Claude Code]",
+      lines = { "test" },
+    }
+    _G.vim._windows[1] = {
+      cursor = { 1, 0 },
+    }
+
+    mock_server.last_broadcast = nil
+    _G.vim.test.set_mode("n")
+    selection.update_selection()
+
+    -- Should broadcast because old pattern is no longer used (it's not a term://)
+    assert(mock_server.last_broadcast ~= nil, "Old buffer name pattern should not prevent updates")
+  end)
 end)
 
 -- Tests for range selection functionality (fix for issue #25)

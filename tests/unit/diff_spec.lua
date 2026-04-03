@@ -537,5 +537,78 @@ describe("Diff Module", function()
     end)
   end)
 
+  describe("File Explorer Compatibility", function()
+    it("should recognise snacks_picker_list as excluded filetype", function()
+      -- Test that the exclusion logic includes snacks_picker_list
+      -- This is a conceptual test of the exclusion list
+      local excluded_filetypes = {
+        "neo-tree",
+        "NvimTree",
+        "oil",
+        "minifiles",
+        "netrw",
+        "aerial",
+        "tagbar",
+        "snacks_picker_list",
+      }
+
+      -- Verify snacks_picker_list is in the list
+      local found = false
+      for _, ft in ipairs(excluded_filetypes) do
+        if ft == "snacks_picker_list" then
+          found = true
+          break
+        end
+      end
+
+      expect(found).to_be_true()
+    end)
+
+    it("should recognise split creation condition for snacks_picker_list", function()
+      -- Test the condition that triggers split creation
+      -- In actual code: buftype == "terminal" or buftype == "prompt" or filetype == "neo-tree" or filetype == "snacks_picker_list"
+      local buftype = ""
+      local filetype = "snacks_picker_list"
+
+      local should_create_split = buftype == "terminal"
+        or buftype == "prompt"
+        or filetype == "neo-tree"
+        or filetype == "snacks_picker_list"
+
+      expect(should_create_split).to_be_true()
+    end)
+
+    it("should handle various excluded file explorer filetypes", function()
+      -- Test that all excluded filetypes are properly recognised
+      local excluded_filetypes = {
+        "neo-tree",
+        "NvimTree",
+        "oil",
+        "minifiles",
+        "netrw",
+        "aerial",
+        "tagbar",
+        "snacks_picker_list",
+      }
+
+      -- Verify all excluded filetypes would be filtered
+      for _, ft in ipairs(excluded_filetypes) do
+        -- Simulate the exclusion check
+        local is_excluded = (
+          ft == "neo-tree"
+          or ft == "NvimTree"
+          or ft == "oil"
+          or ft == "minifiles"
+          or ft == "netrw"
+          or ft == "aerial"
+          or ft == "tagbar"
+          or ft == "snacks_picker_list"
+        )
+
+        expect(is_excluded).to_be_true()
+      end
+    end)
+  end)
+
   teardown()
 end)

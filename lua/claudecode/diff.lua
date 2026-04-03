@@ -748,13 +748,9 @@ function M._resolve_diff_as_saved(tab_name, buffer_id)
     logger.debug("diff", "No resolution callback found for saved diff", tab_name)
   end
 
-  -- Check if auto_close_on_accept is enabled
   if config and config.diff_opts and config.diff_opts.auto_close_on_accept then
     logger.debug("diff", "auto_close_on_accept enabled, scheduling cleanup for", tab_name)
-
-    -- Schedule cleanup after MCP response completes
     vim.defer_fn(function()
-      -- Verify diff still exists and is in saved state
       if active_diffs[tab_name] and active_diffs[tab_name].status == "saved" then
         logger.debug("diff", "Auto-closing diff", tab_name)
         M.close_diff_by_tab_name(tab_name)
@@ -1051,8 +1047,7 @@ function M._cleanup_diff_state(tab_name, reason)
         vim.cmd("diffoff")
       end)
 
-      -- Close the target window if file wasn't already open (improved UX for auto-close)
-      if diff_data.file_was_already_open == false and not diff_data.is_new_file then
+      if not diff_data.file_visible_in_window and not diff_data.is_new_file then
         logger.debug("diff", "Closing target window as file wasn't already open", tab_name)
         pcall(vim.api.nvim_win_close, diff_data.target_window, false)
       end
@@ -1127,6 +1122,7 @@ function M._setup_blocking_diff(params, resolution_callback)
     local terminal_win_in_new_tab = nil
     local existing_buffer = nil
     local target_window = nil
+    local file_visible_in_window = false
     -- Track new tab handle and original terminal visibility for robust cleanup
     local new_tab_handle = nil
     local had_terminal_in_original = false
@@ -1161,6 +1157,7 @@ function M._setup_blocking_diff(params, resolution_callback)
           for _, win in ipairs(vim.api.nvim_list_wins()) do
             if vim.api.nvim_win_get_buf(win) == existing_buffer then
               target_window = win
+              file_visible_in_window = true
               break
             end
           end
@@ -1171,9 +1168,6 @@ function M._setup_blocking_diff(params, resolution_callback)
         target_window = find_main_editor_window()
       end
     end
-
-    -- Track if file was already open (for cleanup decision)
-    local file_was_already_open = existing_buffer ~= nil
 
     -- If created_new_tab is true, target_window stays nil and will be created in the new tab
     -- If we still can't find a suitable window AND we're not in a new tab, error out
@@ -1242,7 +1236,7 @@ function M._setup_blocking_diff(params, resolution_callback)
       created_at = vim.fn.localtime(),
       status = "pending",
       resolution_callback = resolution_callback,
-      file_was_already_open = file_was_already_open,
+      file_visible_in_window = file_visible_in_window,
       result_content = nil,
       is_new_file = is_new_file,
     })
